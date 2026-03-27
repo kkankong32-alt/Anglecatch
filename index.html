@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>각을 그려 도착 변까지! 출발!</title>
+    <style>
+        :root {
+            --bg-color: #FFF5E4;
+            --primary: #FF7474;
+            --secondary: #4FBDBA;
+            --text-dark: #2C3333;
+            --p1-color: #FF6B6B;
+            --p2-color: #4D96FF;
+            --grid-color: rgba(0, 0, 0, 0.1);
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'NanumSquareRound', 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
+        .flex-col { display: flex; flex-direction: column; }
+        .rounded-full { border-radius: 9999px; }
+        .rounded-xl { border-radius: 1.5rem; }
+        .shadow-lg { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); }
+        .transition { transition: all 0.2s ease-in-out; }
+
+        /* Typography */
+        h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            margin: 0 0 1.5rem 0;
+            text-shadow: 2px 2px 0px #FFE1E1;
+            text-align: center;
+        }
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 900;
+            margin: 1.5rem 0 0.8rem;
+            color: var(--secondary);
+            text-align: center;
+        }
+
+        /* Start Screen */
+        #start-screen {
+            background: var(--white);
+            padding: 2.5rem;
+            max-width: 95%;
+            width: 600px;
+            border: 5px solid var(--primary);
+            overflow-y: auto;
+            max-height: 95vh;
+        }
+
+        .mode-container { display: flex; gap: 1rem; }
+        .mode-btn {
+            flex: 1; padding: 1.2rem; border: 3px solid #E0E0E0; background: #FAFAFA;
+            cursor: pointer; font-size: 1.2rem; font-weight: 800; color: var(--text-dark);
+        }
+        .mode-btn.active { border-color: var(--primary); background: #FFF0F0; }
+        .mode-desc { font-size: 0.95rem; font-weight: 600; margin-top: 0.5rem; color: #666; }
+
+        .player-setup-container {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: space-between;
+        }
+        .player-card {
+            flex: 1; padding: 1rem; background: #F8F9FA; border: 3px solid #E0E0E0;
+            border-radius: 1rem; text-align: center;
+        }
+        .player-card.active-select { border-color: var(--secondary); background: #E8F9F9; }
+        .player-card input {
+            width: 100%; padding: 0.8rem; font-size: 1.2rem; font-weight: bold;
+            text-align: center; border: 2px solid #CCC; border-radius: 0.5rem; margin-bottom: 0.5rem;
+        }
+        .player-card input:focus { outline: none; border-color: var(--primary); }
+        .selected-emoji { font-size: 3.5rem; height: 4.5rem; display: flex; align-items: center; justify-content: center; }
+
+        .p1-label { color: var(--p1-color); font-weight: 900; font-size: 1.2rem; margin-bottom: 0.5rem;}
+        .p2-label { color: var(--p2-color); font-weight: 900; font-size: 1.2rem; margin-bottom: 0.5rem;}
+
+        .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; }
+        .emoji-btn { font-size: 2.2rem; background: #F0F0F0; border: 3px solid transparent; border-radius: 1rem; padding: 0.5rem; cursor: pointer; }
+        .emoji-btn:hover { background: #E0E0E0; transform: scale(1.1); }
+        .emoji-btn.p1-selected { border-color: var(--p1-color); background: #FFE1E1; }
+        .emoji-btn.p2-selected { border-color: var(--p2-color); background: #E1F0FF; }
+
+        .start-btn {
+            background: var(--primary); color: white; border: none; padding: 1.2rem 2rem;
+            font-size: 1.5rem; font-weight: 900; cursor: pointer; width: 100%; margin-top: 1rem;
+        }
+        .start-btn:hover:not(:disabled) { background: #FF5252; transform: translateY(-3px); box-shadow: 0 6px 15px rgba(255,116,116,0.4); }
+        .start-btn:active:not(:disabled) { transform: translateY(0); }
+        .start-btn:disabled { background: #D3D3D3; cursor: not-allowed; }
+
+        /* Game Screen */
+        #game-screen { width: 100%; max-width: 650px; display: flex; flex-direction: column; align-items: center; padding: 1rem; }
+
+        .scoreboard {
+            width: 100%; display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900;
+            background: var(--white); padding: 0.8rem 1.5rem; border-radius: 1rem; margin-bottom: 0.8rem;
+            border: 3px solid #EEE;
+        }
+        .score-p1 { color: var(--p1-color); }
+        .score-p2 { color: var(--p2-color); }
+
+        .top-ui {
+            width: 100%; display: flex; justify-content: space-between; align-items: center;
+            background: var(--white); padding: 1rem 1.5rem; border-radius: 1rem; border: 4px solid var(--secondary);
+            margin-bottom: 1rem;
+        }
+
+        .turn-info { display: flex; flex-direction: column; align-items: flex-start; }
+        .turn-emoji { font-size: 2.5rem; line-height: 1; margin-bottom: 0.2rem; }
+        .turn-text { font-size: 1.5rem; font-weight: 900; }
+
+        .mission-box {
+            background: #F0F8FF; border: 3px dashed var(--secondary); padding: 0.8rem 1.5rem;
+            border-radius: 1rem; font-weight: 900; text-align: center;
+        }
+        .mission-label { font-size: 1rem; color: #666; margin-bottom: 0.2rem; }
+        .mission-highlight { color: var(--primary); font-size: 1.6rem; line-height: 1.2; }
+
+        .dice-btn {
+            background: var(--white); border: 4px solid #DDD; font-size: 3rem; width: 80px; height: 80px;
+            cursor: pointer; border-radius: 1.5rem; display: flex; justify-content: center; align-items: center;
+        }
+        .dice-btn:hover:not(:disabled) { border-color: var(--primary); transform: scale(1.1); }
+        .dice-btn:disabled { opacity: 0.5; cursor: default; border-color: #DDD !important; transform: none !important; }
+
+        .canvas-container {
+            position: relative; background: var(--white); border-radius: 1rem; border: 3px solid #EEE;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); overflow: hidden; width: 100%; aspect-ratio: 1 / 1; touch-action: none;
+        }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+
+        .bottom-ui { width: 100%; display: flex; justify-content: space-between; margin-top: 1rem; }
+        .undo-btn, .home-btn {
+            background: var(--white); border: 3px solid #CCC; padding: 0.8rem 1.5rem;
+            font-size: 1.2rem; font-weight: 900; color: var(--text-dark); cursor: pointer; border-radius: 1rem;
+        }
+        .undo-btn:hover, .home-btn:hover { background: #F0F0F0; border-color: #AAA; }
+
+        /* Game Over Modal */
+        #game-over-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #game-over-modal.show { opacity: 1; pointer-events: auto; }
+        
+        .modal-content {
+            background: white; padding: 3rem; border-radius: 2rem; text-align: center;
+            border: 6px solid var(--primary); box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 90%; max-width: 500px;
+        }
+        #game-over-modal.show .modal-content { transform: scale(1); }
+
+        .modal-winner { font-size: 2.5rem; font-weight: 900; color: var(--primary); margin-bottom: 1rem; }
+        .modal-emoji { font-size: 5rem; margin-bottom: 1rem; line-height: 1; }
+        .modal-records {
+            background: #F8F9FA; padding: 1.5rem; border-radius: 1rem; margin-bottom: 2rem;
+            font-size: 1.4rem; font-weight: 900; display: flex; justify-content: space-around;
+        }
+
+        .modal-btns { display: flex; gap: 1rem; }
+        .modal-btn {
+            flex: 1; padding: 1.2rem; font-size: 1.3rem; font-weight: 900; border: none;
+            border-radius: 1rem; cursor: pointer; color: white; transition: all 0.2s;
+        }
+        .btn-restart { background: var(--secondary); }
+        .btn-restart:hover { background: #3CA5A2; transform: translateY(-2px); }
+        .btn-home { background: #95A5A6; }
+        .btn-home:hover { background: #7F8C8D; transform: translateY(-2px); }
+
+        /* Toast Message */
+        #toast {
+            position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            background: rgba(0, 0, 0, 0.85); color: white; padding: 1.2rem 2rem; border-radius: 3rem;
+            font-size: 1.3rem; font-weight: 900; z-index: 3000; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none; box-shadow: 0 6px 16px rgba(0,0,0,0.3); text-align: center; white-space: nowrap;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        #confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1500; }
+
+        /* Responsive */
+        @media (max-width: 500px) {
+            .emoji-grid { grid-template-columns: repeat(4, 1fr); }
+            h1 { font-size: 1.8rem; }
+            .player-setup-container { flex-direction: column; }
+            .top-ui { padding: 0.8rem; }
+            .turn-text { font-size: 1.2rem; }
+            .mission-highlight { font-size: 1.2rem; }
+            .dice-btn { width: 60px; height: 60px; font-size: 2.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div id="toast">메시지</div>
+    <canvas id="confetti" class="hidden"></canvas>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="rounded-xl shadow-lg transition">
+        <h1>📐 각을 그려 도착 변까지! 🚀</h1>
+        
+        <div class="section-title">1. 게임 모드 선택</div>
+        <div class="mode-container">
+            <button id="modeA" class="mode-btn rounded-xl active transition" onclick="selectMode('A')">
+                모드 A (기본)
+                <div class="mode-desc">홀수=예각 / 짝수=둔각</div>
+            </button>
+            <button id="modeB" class="mode-btn rounded-xl transition" onclick="selectMode('B')">
+                모드 B (직각 포함)
+                <div class="mode-desc">1,2=예각 / 3,4=직각 / 5,6=둔각</div>
+            </button>
+        </div>
+
+        <div class="section-title">2. 이름 & 캐릭터 선택</div>
+        
+        <div class="player-setup-container">
+            <div class="player-card active-select" id="p1-card" onclick="setSelectionStep(1)">
+                <div class="p1-label">Player 1</div>
+                <input type="text" id="p1-name-input" placeholder="이름 입력 (최대6자)" maxlength="6" autocomplete="off" oninput="checkStartBtn()">
+                <div class="selected-emoji" id="p1-display">❓</div>
+            </div>
+            
+            <div class="player-card" id="p2-card" onclick="setSelectionStep(2)">
+                <div class="p2-label">Player 2</div>
+                <input type="text" id="p2-name-input" placeholder="이름 입력 (최대6자)" maxlength="6" autocomplete="off" oninput="checkStartBtn()">
+                <div class="selected-emoji" id="p2-display">❓</div>
+            </div>
+        </div>
+
+        <div class="emoji-grid" id="emoji-grid">
+            <!-- Emojis injected via JS -->
+        </div>
+
+        <button id="start-btn" class="start-btn rounded-xl transition" disabled onclick="startGame()">게임 시작!</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden transition">
+        
+        <!-- Score Board -->
+        <div class="scoreboard shadow-lg">
+            <div class="score-p1"><span id="sb-p1-name">P1</span>: <span id="sb-p1-score">0</span>승</div>
+            <div class="score-p2"><span id="sb-p2-name">P2</span>: <span id="sb-p2-score">0</span>승</div>
+        </div>
+
+        <!-- Top UI -->
+        <div class="top-ui shadow-lg">
+            <div class="turn-info">
+                <div class="turn-emoji" id="turn-emoji">🐭</div> 
+                <div class="turn-text" id="turn-text">Player 1 턴</div>
+            </div>
+            
+            <div class="mission-box flex-col flex-center">
+                <span class="mission-label">이번 미션은?</span>
+                <span id="mission-text" class="mission-highlight">주사위를<br>굴려요!</span>
+            </div>
+
+            <button id="dice-btn" class="dice-btn transition" onclick="rollDice()">🎲</button>
+        </div>
+
+        <!-- Canvas -->
+        <div class="canvas-container">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+        </div>
+
+        <!-- Bottom UI -->
+        <div class="bottom-ui">
+            <button class="home-btn transition" onclick="goHome()">🏠 홈으로</button>
+            <button class="undo-btn transition" onclick="undoMove()">↩ 무르기</button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal">
+        <div class="modal-content">
+            <div class="modal-emoji" id="modal-winner-emoji">🏆</div>
+            <div class="modal-winner" id="modal-winner-text">OOO 승리!</div>
+            
+            <div class="modal-records">
+                <div style="color: var(--p1-color)"><span id="modal-p1-name">P1</span><br><span id="modal-p1-score">0</span>승</div>
+                <div style="color: var(--p2-color)"><span id="modal-p2-name">P2</span><br><span id="modal-p2-score">0</span>승</div>
+            </div>
+
+            <div class="modal-btns">
+                <button class="modal-btn btn-restart" onclick="playAgain()">다시 하기</button>
+                <button class="modal-btn btn-home" onclick="goHome()">홈으로</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- State & Constants ---
+    const emojis = ['🐭', '🐮', '🐯', '🐰', '🐲', '🐍', '🐴', '🐑', '🐵', '🐔', '🐶', '🐷'];
+    const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    
+    let state = {
+        mode: 'A',
+        p1: null,
+        p2: null,
+        p1Name: '',
+        p2Name: '',
+        wins: { 1: 0, 2: 0 },
+        selectionStep: 1, // 1 for P1, 2 for P2
+        turn: 1, // 1 or 2
+        mission: null, // 'acute', 'right', 'obtuse'
+        diceValue: null,
+        history: [], 
+        paths: { 1: [], 2: [] },
+        isGameOver: false
+    };
+
+    // Grid Constants
+    const GRID_SIZE = 20;
+    const CANVAS_SIZE = 600;
+    const CELL_SIZE = CANVAS_SIZE / GRID_SIZE;
+    
+    // Start and End Lines definition (Grid coordinates)
+    const START_LINE = { top: {x: 2, y: 8}, bottom: {x: 2, y: 12} };
+    const END_LINE = { top: {x: 18, y: 8}, bottom: {x: 18, y: 12} };
+
+    // DOM Elements
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const startBtn = document.getElementById('start-btn');
+    const emojiGrid = document.getElementById('emoji-grid');
+    const p1Display = document.getElementById('p1-display');
+    const p2Display = document.getElementById('p2-display');
+    const p1Card = document.getElementById('p1-card');
+    const p2Card = document.getElementById('p2-card');
+    
+    const turnEmoji = document.getElementById('turn-emoji');
+    const turnText = document.getElementById('turn-text');
+    const missionText = document.getElementById('mission-text');
+    const diceBtn = document.getElementById('dice-btn');
+    const toastEl = document.getElementById('toast');
+
+    const gameOverModal = document.getElementById('game-over-modal');
+
+    // Drawing Interaction State
+    let isDragging = false;
+    let dragStartPt = null;
+    let dragCurrentPt = null;
+
+    // --- Audio Engine (Web Audio API) ---
+    let audioCtx = null;
+    
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playTone(freq, type, duration, vol=0.1) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playDiceSound() {
+        initAudio();
+        let time = 0;
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => playTone(800 + Math.random()*400, 'square', 0.05, 0.08), time * 1000);
+            time += 0.08;
+        }
+    }
+
+    function playSuccessSound() {
+        initAudio();
+        playTone(523.25, 'sine', 0.2, 0.3); // C5
+        setTimeout(() => playTone(659.25, 'sine', 0.2, 0.3), 100); // E5
+        setTimeout(() => playTone(783.99, 'sine', 0.4, 0.3), 200); // G5
+    }
+
+    function playFailSound() {
+        initAudio();
+        playTone(300, 'sawtooth', 0.3, 0.2);
+        setTimeout(() => playTone(250, 'sawtooth', 0.4, 0.2), 150);
+    }
+
+    function playWinSound() {
+        initAudio();
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'sine', 0.3, 0.3), i * 150);
+        });
+        setTimeout(() => {
+            playTone(1046.50, 'sine', 0.6, 0.3);
+            playTone(1318.51, 'sine', 0.6, 0.3);
+        }, 600);
+    }
+
+    // --- UI & Setup Logic ---
+
+    function showToast(msg, duration = 3000) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), duration);
+    }
+
+    function renderEmojiGrid() {
+        emojiGrid.innerHTML = '';
+        emojis.forEach(emoji => {
+            const btn = document.createElement('button');
+            btn.className = 'emoji-btn transition';
+            btn.textContent = emoji;
+            btn.onclick = () => selectEmoji(emoji);
+            
+            if (state.p1 === emoji) btn.classList.add('p1-selected');
+            if (state.p2 === emoji) btn.classList.add('p2-selected');
+            
+            emojiGrid.appendChild(btn);
+        });
+    }
+
+    function selectMode(mode) {
+        state.mode = mode;
+        document.getElementById('modeA').classList.toggle('active', mode === 'A');
+        document.getElementById('modeB').classList.toggle('active', mode === 'B');
+    }
+
+    function setSelectionStep(step) {
+        state.selectionStep = step;
+        p1Card.classList.toggle('active-select', step === 1);
+        p2Card.classList.toggle('active-select', step === 2);
+    }
+
+    function selectEmoji(emoji) {
+        initAudio(); 
+        if (state.p1 === emoji || state.p2 === emoji) return; 
+
+        if (state.selectionStep === 1) {
+            state.p1 = emoji;
+            p1Display.textContent = emoji;
+            setSelectionStep(2); // Move to P2 automatically
+        } else {
+            state.p2 = emoji;
+            p2Display.textContent = emoji;
+            setSelectionStep(1); 
+        }
+        
+        renderEmojiGrid();
+        playTone(600, 'sine', 0.1);
+        checkStartBtn();
+    }
+
+    function checkStartBtn() {
+        // Both emojis must be selected
+        if (state.p1 && state.p2) {
+            startBtn.disabled = false;
+        } else {
+            startBtn.disabled = true;
+        }
+    }
+
+    function startGame() {
+        // Grab names, fallback to default if empty
+        let p1Input = document.getElementById('p1-name-input').value.trim();
+        let p2Input = document.getElementById('p2-name-input').value.trim();
+        
+        state.p1Name = p1Input || '플레이어 1';
+        state.p2Name = p2Input || '플레이어 2';
+
+        // Update Scoreboard UI
+        document.getElementById('sb-p1-name').textContent = state.p1Name;
+        document.getElementById('sb-p2-name').textContent = state.p2Name;
+        updateScoreBoard();
+
+        startScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        
+        initGameTurn();
+        showToast("출발 변의 위나 아래 점을 클릭해서 시작하세요!");
+    }
+
+    function updateScoreBoard() {
+        document.getElementById('sb-p1-score').textContent = state.wins[1];
+        document.getElementById('sb-p2-score').textContent = state.wins[2];
+    }
+
+    function initGameTurn() {
+        state.history = [];
+        state.paths = { 1: [], 2: [] };
+        state.isGameOver = false;
+        state.turn = 1;
+        state.mission = null;
+        state.diceValue = null;
+        
+        updateTopUI();
+        drawCanvas();
+    }
+
+    function updateTopUI() {
+        if (state.isGameOver) return;
+        
+        turnEmoji.textContent = state.turn === 1 ? state.p1 : state.p2;
+        turnText.textContent = state.turn === 1 ? state.p1Name + " 턴!" : state.p2Name + " 턴!";
+        turnText.style.color = state.turn === 1 ? 'var(--p1-color)' : 'var(--p2-color)';
+
+        if (state.mission) {
+            let korMission = state.mission === 'acute' ? '예각' : state.mission === 'right' ? '직각' : '둔각';
+            missionText.innerHTML = `${korMission}을<br>그려요!`;
+            diceBtn.disabled = true;
+        } else {
+            missionText.innerHTML = `주사위를<br>굴려요!`;
+            diceBtn.disabled = false;
+            diceBtn.textContent = '🎲';
+        }
+    }
+
+    function rollDice() {
+        if (state.mission || state.isGameOver) return;
+        
+        playDiceSound();
+        diceBtn.disabled = true;
+        let rollCount = 0;
+        
+        const rollInterval = setInterval(() => {
+            let tempVal = Math.floor(Math.random() * 6) + 1;
+            diceBtn.textContent = diceFaces[tempVal - 1];
+            rollCount++;
+            
+            if (rollCount >= 10) {
+                clearInterval(rollInterval);
+                state.diceValue = Math.floor(Math.random() * 6) + 1;
+                diceBtn.textContent = diceFaces[state.diceValue - 1];
+                
+                // Determine mission based on mode
+                if (state.mode === 'A') {
+                    state.mission = state.diceValue % 2 !== 0 ? 'acute' : 'obtuse';
+                } else {
+                    if (state.diceValue <= 2) state.mission = 'acute';
+                    else if (state.diceValue <= 4) state.mission = 'right';
+                    else state.mission = 'obtuse';
+                }
+                updateTopUI();
+            }
+        }, 50);
+    }
+
+    function switchTurn() {
+        state.turn = state.turn === 1 ? 2 : 1;
+        state.mission = null;
+        state.diceValue = null;
+        updateTopUI();
+    }
+
+    function undoMove() {
+        if (state.history.length === 0 || state.isGameOver) {
+            showToast("무를 수 있는 선이 없습니다.");
+            return;
+        }
+        // Pop history and revert
+        const lastAction = state.history.pop();
+        state.paths[lastAction.player].pop();
+        
+        // Revert turn to the player who made the move, clear their mission state so they have to roll again
+        state.turn = lastAction.player;
+        state.mission = null;
+        state.diceValue = null;
+        
+        drawCanvas();
+        updateTopUI();
+        playTone(400, 'sine', 0.1);
+    }
+
+    // --- Math & Geometry ---
+
+    function getGridCoord(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
+        
+        const gridX = Math.round(x / CELL_SIZE);
+        const gridY = Math.round(y / CELL_SIZE);
+        
+        return { 
+            x: Math.max(0, Math.min(GRID_SIZE, gridX)), 
+            y: Math.max(0, Math.min(GRID_SIZE, gridY)) 
+        };
+    }
+
+    function isSamePoint(p1, p2) {
+        return p1 && p2 && p1.x === p2.x && p1.y === p2.y;
+    }
+
+    function getDistance(p1, p2) {
+        return Math.max(Math.abs(p1.x - p2.x), Math.abs(p1.y - p2.y));
+    }
+
+    function calculateAngle(pPrev, pVertex, pNew) {
+        const v1 = { x: pPrev.x - pVertex.x, y: pPrev.y - pVertex.y };
+        const v2 = { x: pNew.x - pVertex.x, y: pNew.y - pVertex.y };
+        
+        const dot = v1.x * v2.x + v1.y * v2.y;
+        const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+        const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+        
+        if (mag1 === 0 || mag2 === 0) return -1;
+        
+        let cosTheta = dot / (mag1 * mag2);
+        cosTheta = Math.max(-1, Math.min(1, cosTheta)); 
+        
+        return Math.acos(cosTheta) * (180 / Math.PI);
+    }
+
+    function evaluateAngle(angle) {
+        if (angle <= 0 || angle >= 179.9) return false; 
+        
+        if (state.mission === 'acute') return angle > 0 && angle < 89; 
+        if (state.mission === 'right') return angle >= 89 && angle <= 91; 
+        if (state.mission === 'obtuse') return angle > 91 && angle < 180; 
+        
+        return false;
+    }
+
+    function getImpliedPreviousPointForStart(startPt) {
+        if (startPt.y === START_LINE.top.y) return START_LINE.bottom;
+        if (startPt.y === START_LINE.bottom.y) return START_LINE.top;
+        return null;
+    }
+
+    // --- Canvas Rendering ---
+
+    function drawGrid() {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid-color').trim();
+        for (let x = 0; x <= GRID_SIZE; x++) {
+            for (let y = 0; y <= GRID_SIZE; y++) {
+                ctx.beginPath();
+                ctx.arc(x * CELL_SIZE, y * CELL_SIZE, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    function varColor(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function drawSegment(p1, p2, color, width = 6) {
+        ctx.beginPath();
+        ctx.moveTo(p1.x * CELL_SIZE, p1.y * CELL_SIZE);
+        ctx.lineTo(p2.x * CELL_SIZE, p2.y * CELL_SIZE);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    }
+
+    function drawBaseLines() {
+        drawSegment(START_LINE.top, START_LINE.bottom, varColor('--primary'), 10);
+        ctx.fillStyle = varColor('--primary');
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('출발', START_LINE.top.x * CELL_SIZE - 50, START_LINE.top.y * CELL_SIZE + 10);
+        
+        drawSegment(END_LINE.top, END_LINE.bottom, varColor('--secondary'), 10);
+        ctx.fillStyle = varColor('--secondary');
+        ctx.fillText('도착', END_LINE.top.x * CELL_SIZE + 20, END_LINE.top.y * CELL_SIZE + 10);
+    }
+
+    function drawEmojiAt(p, emoji) {
+        ctx.font = '28px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, p.x * CELL_SIZE, p.y * CELL_SIZE);
+    }
+
+    function drawCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        drawBaseLines();
+
+        for (let p = 1; p <= 2; p++) {
+            const path = state.paths[p];
+            const color = p === 1 ? varColor('--p1-color') : varColor('--p2-color');
+            const emoji = p === 1 ? state.p1 : state.p2;
+
+            for (let i = 1; i < path.length; i++) {
+                drawSegment(path[i-1], path[i], color);
+                if (i > 1 || path.length > 2) {
+                     drawEmojiAt(path[i], emoji);
+                }
+            }
+            if (path.length > 1) {
+                drawEmojiAt(path[1], emoji);
+            }
+        }
+
+        if (isDragging && dragStartPt && dragCurrentPt) {
+            const color = state.turn === 1 ? varColor('--p1-color') : varColor('--p2-color');
+            ctx.globalAlpha = 0.5;
+            drawSegment(dragStartPt, dragCurrentPt, color);
+            ctx.globalAlpha = 1.0;
+            
+            let prevPt = null;
+            const path = state.paths[state.turn];
+            if (path.length >= 2) prevPt = path[path.length - 2];
+            else if (path.length === 1) prevPt = path[0]; 
+
+            if (prevPt && !isSamePoint(dragStartPt, dragCurrentPt)) {
+                let angle = calculateAngle(prevPt, dragStartPt, dragCurrentPt);
+                if (angle !== -1) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.fillText(Math.round(angle) + '°', dragStartPt.x * CELL_SIZE + 20, dragStartPt.y * CELL_SIZE - 20);
+                }
+            }
+        }
+    }
+
+    // --- Input Handling ---
+
+    function handleInputStart(e) {
+        if (state.isGameOver) return;
+        if (!state.mission) {
+            showToast("주사위를 먼저 굴려주세요!");
+            return;
+        }
+
+        e.preventDefault();
+        const pt = getGridCoord(e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY);
+        const path = state.paths[state.turn];
+        
+        if (path.length === 0) {
+            if (isSamePoint(pt, START_LINE.top) || isSamePoint(pt, START_LINE.bottom)) {
+                dragStartPt = pt;
+                isDragging = true;
+                let impliedPrev = getImpliedPreviousPointForStart(pt);
+                path.push(impliedPrev);
+                path.push(pt);
+            } else {
+                showToast("출발 변의 양 끝점 중 하나를 눌러 시작하세요!");
+            }
+        } else {
+            const lastPt = path[path.length - 1];
+            if (isSamePoint(pt, lastPt)) {
+                dragStartPt = pt;
+                isDragging = true;
+            } else {
+                showToast("마지막으로 그린 선의 끝점에서 시작해야 해요!");
+            }
+        }
+        dragCurrentPt = pt;
+        drawCanvas();
+    }
+
+    function handleInputMove(e) {
+        if (!isDragging || state.isGameOver) return;
+        e.preventDefault();
+        dragCurrentPt = getGridCoord(e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY);
+        drawCanvas();
+    }
+
+    function checkWin(pt) {
+        return (pt.x === END_LINE.top.x && pt.y >= END_LINE.top.y && pt.y <= END_LINE.bottom.y);
+    }
+
+    function handleInputEnd(e) {
+        if (!isDragging || state.isGameOver) return;
+        isDragging = false;
+        
+        const path = state.paths[state.turn];
+        
+        if (isSamePoint(dragStartPt, dragCurrentPt)) {
+            if (path.length === 2) path.length = 0; 
+            drawCanvas();
+            return;
+        }
+
+        const dist = getDistance(dragStartPt, dragCurrentPt);
+        if (dist > 3) {
+            showToast("선이 너무 길어요! (최대 3칸)");
+            playFailSound();
+            if (path.length === 2) path.length = 0;
+            drawCanvas();
+            return;
+        }
+
+        const prevPt = path[path.length - 2];
+        const angle = calculateAngle(prevPt, dragStartPt, dragCurrentPt);
+        
+        if (angle === -1 || angle === 0 || angle === 180) {
+             showToast("겹치거나 일직선인 선은 그릴 수 없어요!");
+             playFailSound();
+             if (path.length === 2) path.length = 0;
+             drawCanvas();
+             return;
+        }
+
+        const isCorrect = evaluateAngle(angle);
+
+        if (isCorrect) {
+            path.push(dragCurrentPt);
+            state.history.push({ player: state.turn });
+            playSuccessSound();
+            
+            if (checkWin(dragCurrentPt)) {
+                handleGameOver();
+            } else {
+                switchTurn();
+            }
+        } else {
+            let korAngle = Math.round(angle);
+            showToast(`앗! 지금 그린 건 ${korAngle}°야. 다시 그려볼까?`);
+            playFailSound();
+            if (path.length === 2) path.length = 0; 
+        }
+        
+        dragStartPt = null;
+        dragCurrentPt = null;
+        drawCanvas();
+    }
+
+    // --- Game Over & Reset Logic ---
+
+    function handleGameOver() {
+        state.isGameOver = true;
+        state.wins[state.turn]++; // Update wins
+        updateScoreBoard();
+        
+        playWinSound();
+        missionText.innerHTML = `<span style="color:var(--primary)">승리! 🎉</span>`;
+        turnText.textContent = (state.turn === 1 ? state.p1Name : state.p2Name) + " 승리!";
+        
+        // Show Modal
+        document.getElementById('modal-winner-emoji').textContent = state.turn === 1 ? state.p1 : state.p2;
+        document.getElementById('modal-winner-text').textContent = (state.turn === 1 ? state.p1Name : state.p2Name) + " 승리! 🎉";
+        document.getElementById('modal-p1-name').textContent = state.p1Name;
+        document.getElementById('modal-p2-name').textContent = state.p2Name;
+        document.getElementById('modal-p1-score').textContent = state.wins[1];
+        document.getElementById('modal-p2-score').textContent = state.wins[2];
+        
+        setTimeout(() => {
+            gameOverModal.classList.add('show');
+            startConfetti();
+        }, 1000);
+    }
+
+    function playAgain() {
+        gameOverModal.classList.remove('show');
+        stopConfetti();
+        initGameTurn(); // Reset board, keep names and score
+    }
+
+    function goHome() {
+        // Reload page to start completely fresh
+        location.reload();
+    }
+
+    // Canvas Event Listeners
+    canvas.addEventListener('mousedown', handleInputStart);
+    canvas.addEventListener('mousemove', handleInputMove);
+    window.addEventListener('mouseup', handleInputEnd); 
+
+    canvas.addEventListener('touchstart', handleInputStart, {passive: false});
+    canvas.addEventListener('touchmove', handleInputMove, {passive: false});
+    window.addEventListener('touchend', handleInputEnd);
+
+    // --- Init ---
+    renderEmojiGrid();
+
+    // --- Confetti Animation ---
+    const confettiCanvas = document.getElementById('confetti');
+    const cCtx = confettiCanvas.getContext('2d');
+    let particles = [];
+    let confettiActive = false;
+
+    function startConfetti() {
+        confettiCanvas.classList.remove('hidden');
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+        confettiActive = true;
+        particles = [];
+        
+        for (let i = 0; i < 150; i++) {
+            particles.push({
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2,
+                vx: (Math.random() - 0.5) * 25,
+                vy: (Math.random() - 1) * 25,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                size: Math.random() * 10 + 5
+            });
+        }
+        requestAnimationFrame(updateConfetti);
+    }
+
+    function stopConfetti() {
+        confettiActive = false;
+        confettiCanvas.classList.add('hidden');
+    }
+
+    function updateConfetti() {
+        if (!confettiActive) return;
+        cCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        
+        particles.forEach((p, index) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.5; // gravity
+            
+            cCtx.fillStyle = p.color;
+            cCtx.beginPath();
+            cCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            cCtx.fill();
+            
+            if (p.y > window.innerHeight) particles.splice(index, 1);
+        });
+        
+        if (particles.length > 0) {
+            requestAnimationFrame(updateConfetti);
+        }
+    }
+
+</script>
+</body>
+</html>
